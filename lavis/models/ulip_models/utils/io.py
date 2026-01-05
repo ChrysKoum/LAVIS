@@ -1,7 +1,8 @@
 import h5py
 import numpy as np
-import open3d
 import os
+
+# Note: open3d is imported lazily in _read_pcd to make it optional
 
 class IO:
     @classmethod
@@ -28,6 +29,13 @@ class IO:
     # Support PCD files without compression ONLY!
     @classmethod
     def _read_pcd(cls, file_path):
+        try:
+            import open3d
+        except ImportError:
+            raise ImportError(
+                "open3d is required for reading .pcd files. "
+                "Install with: pip install 'salesforce-lavis[3d]' or pip install 'open3d>=0.16.0'"
+            )
         pc = open3d.io.read_point_cloud(file_path)
         ptcloud = np.array(pc.points)
         return ptcloud

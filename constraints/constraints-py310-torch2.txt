@@ -1,0 +1,21 @@
+# LAVIS Known-Good Constraints for Python 3.10 + PyTorch 2.x
+# Usage: pip install -c constraints/constraints-py310-torch2.txt -e .
+#
+# This file pins versions known to work together on Python 3.10 with CUDA 11.8.
+# Use this for reproducible installs in notebook environments.
+
+torch==2.0.1
+torchvision==0.15.2
+torchaudio==2.0.2
+transformers==4.33.2
+diffusers==0.16.0
+timm==0.9.5
+fairscale==0.4.13
+opencv-python-headless==4.8.0.76
+numpy==1.24.3
+pillow==10.0.0
+tokenizers==0.13.3
+accelerate==0.21.0
+peft==0.4.0
+sentencepiece==0.1.99
+protobuf==3.20.3

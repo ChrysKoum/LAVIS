@@ -20,7 +20,7 @@ def fetch_requirements(filename):
 
 setup(
     name="salesforce-lavis",
-    version="1.0.1",
+    version="1.0.2",
     author="Dongxu Li, Junnan Li, Hung Le, Guangsen Wang, Silvio Savarese, Steven C.H. Hoi",
     description="LAVIS - A One-stop Library for Language-Vision Intelligence",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -29,7 +29,12 @@ setup(
     license="3-Clause BSD",
     packages=find_namespace_packages(include="lavis.*"),
     install_requires=fetch_requirements("requirements.txt"),
-    python_requires=">=3.7.0",
+    extras_require={
+        "3d": ["open3d>=0.16.0", "h5py"],
+        "dev": ["pre-commit"],
+        "all": ["open3d>=0.16.0", "h5py", "pre-commit"],
+    },
+    python_requires=">=3.8.0",
     include_package_data=True,
     dependency_links=DEPENDENCY_LINKS,
     zip_safe=False,

@@ -1,0 +1,5 @@
+# 3D/Point Cloud Dependencies
+# Install with: pip install salesforce-lavis[3d]
+
+open3d>=0.16.0
+h5py

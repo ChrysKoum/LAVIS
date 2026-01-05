@@ -38,8 +38,17 @@ from lavis.models.blip2_models.blip2_qformer import Blip2Qformer
 from lavis.models.blip2_models.blip2_image_text_matching import Blip2ITM
 
 from lavis.models.blip2_models.blip2_t5_instruct import Blip2T5Instruct
-from lavis.models.blip2_models.blip2_vicuna_instruct import Blip2VicunaInstruct
-from lavis.models.blip2_models.blip2_vicuna_xinstruct import Blip2VicunaXInstruct
+
+# Optional Vicuna models - require peft and specific transformers versions
+try:
+    from lavis.models.blip2_models.blip2_vicuna_instruct import Blip2VicunaInstruct
+except (ImportError, Exception):
+    Blip2VicunaInstruct = None
+
+try:
+    from lavis.models.blip2_models.blip2_vicuna_xinstruct import Blip2VicunaXInstruct
+except (ImportError, Exception):
+    Blip2VicunaXInstruct = None
 
 from lavis.models.blip_diffusion_models.blip_diffusion import BlipDiffusion
 

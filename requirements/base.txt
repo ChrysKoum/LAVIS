@@ -1,12 +1,9 @@
-# LAVIS Dependencies
-# For reproducible installs, use: pip install -c constraints/constraints-py310-torch2.txt -e .
-# For 3D/point cloud support: pip install -e ".[3d]"
+# LAVIS Core Dependencies
+# Minimal set for most use cases (BLIP-2, etc.)
 
 contexttimer
 decord
-diffusers<=0.16.0
 einops>=0.4.1
-fairscale==0.4.4
 ftfy
 iopath
 ipython
@@ -35,8 +32,6 @@ soundfile
 moviepy
 nltk
 peft
-
 easydict
 pyyaml_env_tag
-# open3d removed from base - install with: pip install salesforce-lavis[3d]
 h5py
