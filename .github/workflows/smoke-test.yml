@@ -1,0 +1,46 @@
+name: Smoke Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install minimal dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install minimal deps needed for smoke test
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install transformers>=4.41,<5 omegaconf timm pillow
+
+    - name: Install LAVIS (no deps)
+      run: |
+        pip install -e . --no-deps
+
+    - name: Smoke test - import lavis
+      run: |
+        python -c "import lavis; print('import lavis: OK')"
+
+    - name: Smoke test - import load_model_and_preprocess
+      run: |
+        python -c "from lavis.models import load_model_and_preprocess; print('import load_model_and_preprocess: OK')"
+
+    - name: Smoke test - compat module
+      run: |
+        python -c "from lavis.models.compat import apply_chunking_to_forward; print('compat module: OK')"

@@ -84,13 +84,19 @@ class DialogueTask(BaseTask):
         return coco_res
 
 
-# TODO better structure for this.
-from pycocoevalcap.eval import COCOEvalCap
+# pycocoevalcap is imported lazily inside coco_dialogue_eval to make it optional
 from pycocotools.coco import COCO
 from torchvision.datasets.utils import download_url
 
 
 def coco_dialogue_eval(coco_gt_root, results_file, split):
+    try:
+        from pycocoevalcap.eval import COCOEvalCap
+    except ImportError:
+        raise ImportError(
+            "pycocoevalcap is required for dialogue evaluation. "
+            "Install with: pip install pycocoevalcap"
+        )
 
     urls = {
         "val": "https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val_gt.json",

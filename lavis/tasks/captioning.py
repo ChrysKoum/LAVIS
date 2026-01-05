@@ -213,13 +213,19 @@ def convert_to_coco_gt(data, outpath, caption_key, sample_id_key, split, load_gt
     json.dump(gt_data, open(outpath, 'w'))
     print(f"Saved annotations at {outpath}")
 
-# TODO better structure for this.
-from pycocoevalcap.eval import COCOEvalCap
+# pycocoevalcap is imported lazily inside coco_caption_eval to make it optional
 from pycocotools.coco import COCO
 from torchvision.datasets.utils import download_url
 
 
 def coco_caption_eval(coco_gt_root, results_file, split, annotation_file=None, img_ids=[]):
+    try:
+        from pycocoevalcap.eval import COCOEvalCap
+    except ImportError:
+        raise ImportError(
+            "pycocoevalcap is required for caption evaluation. "
+            "Install with: pip install pycocoevalcap"
+        )
 
     if annotation_file == None:
         urls = {

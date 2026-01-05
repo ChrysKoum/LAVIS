@@ -5,102 +5,92 @@
  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+import importlib
 import logging
 import torch
 from omegaconf import OmegaConf
 from lavis.common.registry import registry
-
-from lavis.models.base_model import BaseModel
-
-from lavis.models.albef_models.albef_classification import AlbefClassification
-from lavis.models.albef_models.albef_feature_extractor import AlbefFeatureExtractor
-from lavis.models.albef_models.albef_nlvr import AlbefNLVR
-from lavis.models.albef_models.albef_pretrain import AlbefPretrain
-from lavis.models.albef_models.albef_retrieval import AlbefRetrieval
-from lavis.models.albef_models.albef_vqa import AlbefVQA
-from lavis.models.alpro_models.alpro_qa import AlproQA
-from lavis.models.alpro_models.alpro_retrieval import AlproRetrieval
-
-from lavis.models.blip_models.blip import BlipBase
-from lavis.models.blip_models.blip_caption import BlipCaption
-from lavis.models.blip_models.blip_classification import BlipClassification
-from lavis.models.blip_models.blip_feature_extractor import BlipFeatureExtractor
-from lavis.models.blip_models.blip_image_text_matching import BlipITM
-from lavis.models.blip_models.blip_nlvr import BlipNLVR
-from lavis.models.blip_models.blip_pretrain import BlipPretrain
-from lavis.models.blip_models.blip_retrieval import BlipRetrieval
-from lavis.models.blip_models.blip_vqa import BlipVQA
-
-from lavis.models.blip2_models.blip2 import Blip2Base
-from lavis.models.blip2_models.blip2_opt import Blip2OPT
-from lavis.models.blip2_models.blip2_t5 import Blip2T5
-from lavis.models.blip2_models.blip2_qformer import Blip2Qformer
-from lavis.models.blip2_models.blip2_image_text_matching import Blip2ITM
-
-from lavis.models.blip2_models.blip2_t5_instruct import Blip2T5Instruct
-
-# Optional Vicuna models - require peft and specific transformers versions
-try:
-    from lavis.models.blip2_models.blip2_vicuna_instruct import Blip2VicunaInstruct
-except (ImportError, Exception):
-    Blip2VicunaInstruct = None
-
-try:
-    from lavis.models.blip2_models.blip2_vicuna_xinstruct import Blip2VicunaXInstruct
-except (ImportError, Exception):
-    Blip2VicunaXInstruct = None
-
-from lavis.models.blip_diffusion_models.blip_diffusion import BlipDiffusion
-
-from lavis.models.pnp_vqa_models.pnp_vqa import PNPVQA
-from lavis.models.pnp_vqa_models.pnp_unifiedqav2_fid import PNPUnifiedQAv2FiD
-from lavis.models.img2prompt_models.img2prompt_vqa import Img2PromptVQA
-from lavis.models.med import XBertLMHeadDecoder
-from lavis.models.vit import VisionTransformerEncoder
-from lavis.models.clip_models.model import CLIP
-
-from lavis.models.gpt_models.gpt_dialogue import GPTDialogue
-
 from lavis.processors.base_processor import BaseProcessor
+
+# Lazy import mapping: model class name -> (module path, class name)
+# These are loaded on-demand via __getattr__ to avoid import-time failures
+_LAZY_IMPORTS = {
+    # Base
+    "BaseModel": ("lavis.models.base_model", "BaseModel"),
+    
+    # ALBEF
+    "AlbefClassification": ("lavis.models.albef_models.albef_classification", "AlbefClassification"),
+    "AlbefFeatureExtractor": ("lavis.models.albef_models.albef_feature_extractor", "AlbefFeatureExtractor"),
+    "AlbefNLVR": ("lavis.models.albef_models.albef_nlvr", "AlbefNLVR"),
+    "AlbefPretrain": ("lavis.models.albef_models.albef_pretrain", "AlbefPretrain"),
+    "AlbefRetrieval": ("lavis.models.albef_models.albef_retrieval", "AlbefRetrieval"),
+    "AlbefVQA": ("lavis.models.albef_models.albef_vqa", "AlbefVQA"),
+    
+    # ALPRO
+    "AlproQA": ("lavis.models.alpro_models.alpro_qa", "AlproQA"),
+    "AlproRetrieval": ("lavis.models.alpro_models.alpro_retrieval", "AlproRetrieval"),
+    
+    # BLIP
+    "BlipBase": ("lavis.models.blip_models.blip", "BlipBase"),
+    "BlipCaption": ("lavis.models.blip_models.blip_caption", "BlipCaption"),
+    "BlipClassification": ("lavis.models.blip_models.blip_classification", "BlipClassification"),
+    "BlipFeatureExtractor": ("lavis.models.blip_models.blip_feature_extractor", "BlipFeatureExtractor"),
+    "BlipITM": ("lavis.models.blip_models.blip_image_text_matching", "BlipITM"),
+    "BlipNLVR": ("lavis.models.blip_models.blip_nlvr", "BlipNLVR"),
+    "BlipPretrain": ("lavis.models.blip_models.blip_pretrain", "BlipPretrain"),
+    "BlipRetrieval": ("lavis.models.blip_models.blip_retrieval", "BlipRetrieval"),
+    "BlipVQA": ("lavis.models.blip_models.blip_vqa", "BlipVQA"),
+    
+    # BLIP2
+    "Blip2Base": ("lavis.models.blip2_models.blip2", "Blip2Base"),
+    "Blip2OPT": ("lavis.models.blip2_models.blip2_opt", "Blip2OPT"),
+    "Blip2T5": ("lavis.models.blip2_models.blip2_t5", "Blip2T5"),
+    "Blip2Qformer": ("lavis.models.blip2_models.blip2_qformer", "Blip2Qformer"),
+    "Blip2ITM": ("lavis.models.blip2_models.blip2_image_text_matching", "Blip2ITM"),
+    "Blip2T5Instruct": ("lavis.models.blip2_models.blip2_t5_instruct", "Blip2T5Instruct"),
+    "Blip2VicunaInstruct": ("lavis.models.blip2_models.blip2_vicuna_instruct", "Blip2VicunaInstruct"),
+    "Blip2VicunaXInstruct": ("lavis.models.blip2_models.blip2_vicuna_xinstruct", "Blip2VicunaXInstruct"),
+    
+    # BLIP Diffusion
+    "BlipDiffusion": ("lavis.models.blip_diffusion_models.blip_diffusion", "BlipDiffusion"),
+    
+    # PNP / Img2Prompt
+    "PNPVQA": ("lavis.models.pnp_vqa_models.pnp_vqa", "PNPVQA"),
+    "PNPUnifiedQAv2FiD": ("lavis.models.pnp_vqa_models.pnp_unifiedqav2_fid", "PNPUnifiedQAv2FiD"),
+    "Img2PromptVQA": ("lavis.models.img2prompt_models.img2prompt_vqa", "Img2PromptVQA"),
+    
+    # Other
+    "XBertLMHeadDecoder": ("lavis.models.med", "XBertLMHeadDecoder"),
+    "VisionTransformerEncoder": ("lavis.models.vit", "VisionTransformerEncoder"),
+    "CLIP": ("lavis.models.clip_models.model", "CLIP"),
+    "GPTDialogue": ("lavis.models.gpt_models.gpt_dialogue", "GPTDialogue"),
+}
+
+# Cache for lazily imported classes
+_LOADED_CLASSES = {}
+
+
+def __getattr__(name):
+    """Lazy import for model classes (PEP 562)."""
+    if name in _LAZY_IMPORTS:
+        if name not in _LOADED_CLASSES:
+            module_path, class_name = _LAZY_IMPORTS[name]
+            try:
+                module = importlib.import_module(module_path)
+                _LOADED_CLASSES[name] = getattr(module, class_name)
+            except (ImportError, Exception) as e:
+                logging.warning(f"Failed to import {name} from {module_path}: {e}")
+                _LOADED_CLASSES[name] = None
+        return _LOADED_CLASSES[name]
+    raise AttributeError(f"module 'lavis.models' has no attribute '{name}'")
 
 
 __all__ = [
     "load_model",
-    "AlbefClassification",
-    "AlbefFeatureExtractor",
-    "AlbefNLVR",
-    "AlbefVQA",
-    "AlbefPretrain",
-    "AlbefRetrieval",
-    "AlproQA",
-    "AlproRetrieval",
-    "BaseModel",
-    "BlipBase",
-    "BlipFeatureExtractor",
-    "BlipCaption",
-    "BlipClassification",
-    "BlipDiffusion",
-    "BlipITM",
-    "BlipNLVR",
-    "BlipPretrain",
-    "BlipRetrieval",
-    "BlipVQA",
-    "Blip2Qformer",
-    "Blip2Base",
-    "Blip2ITM",
-    "Blip2OPT",
-    "Blip2T5",
-    "Blip2T5Instruct",
-    "Blip2VicunaInstruct",
-    "Blip2VicunaXInstruct",
-    "PNPVQA",
-    "Img2PromptVQA",
-    "PNPUnifiedQAv2FiD",
-    "CLIP",
-    "VisionTransformerEncoder",
-    "XBertLMHeadDecoder",
-    "GPTDialogue",
-]
+    "load_preprocess",
+    "load_model_and_preprocess",
+    "model_zoo",
+] + list(_LAZY_IMPORTS.keys())
 
 
 def load_model(name, model_type, is_eval=False, device="cpu", checkpoint=None):
